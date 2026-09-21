@@ -4,6 +4,17 @@ Output contract version: `v3`
 
 This version validates organic position, exact-ad position and CPC, and automatic-campaign expansion terms. It intentionally replaces the broad traffic/conversion `v2` contract. Do not silently migrate a v2 workbook.
 
+## Ordinary invocation and Feishu sources
+
+The ordinary user input is one target ASIN. Use `feishu-sheet-io.md` to resolve exactly one row in the fixed project tracking sheet, then read both business inputs from that row:
+
+1. product and marketplace information from the Drive workbook referenced by `输入文档`;
+2. advertising campaign, type, keyword, and configured CPC from the online sheet referenced by `测试广告信息`.
+
+Do not ask the user to upload either source while both references are accessible. The bundled input assets define the accepted schemas and remain fallback examples, not the normal invocation interface.
+
+The tracking-sheet target ASIN is the operational input ASIN. For `新品` and `老品新listing测试`, the ASIN inside `输入文档` is source-product metadata and may intentionally differ. Use the same row's `第1天上传时间` as the target Listing upload-date source.
+
 ## Listing input workbook
 
 Keep the existing three sheets and fixed headers.
@@ -24,7 +35,7 @@ Exactly one nonblank product row. Fixed headers:
 10. `自有品牌名称及品牌别名声明。`
 11. `站点`
 
-Blocking values are ASIN, Listing first-upload time, and marketplace.
+For Feishu-resolved runs, the workbook's source ASIN and marketplace are blocking. The target ASIN and target upload date come from the matched tracking row. For a manual fallback run with no tracking row, ASIN, Listing first-upload time, and marketplace remain blocking.
 
 ### `新品基础配置`
 
@@ -36,16 +47,16 @@ Fixed headers: `价格竞品`、`颜色竞品`、`尺寸竞品`、`材质竞品`
 
 Competitors provide context only and never become target position rows.
 
-## Advertising input workbook
+## Advertising input sheet
 
-Accept a one-sheet `.xlsx` whose first row contains these exact headers in order:
+The matched row's `测试广告信息` reference must resolve to a Feishu Sheet whose first data row contains these exact headers in order:
 
 1. `广告活动名称`
 2. `广告类型`
 3. `关键词`
 4. `CPC`
 
-The recommended sheet name is `广告信息`; a different single sheet such as `Sheet1` is allowed when the headers match exactly.
+Select the only visible grid containing the required headers. A name such as `广告信息` or `Sheet1` is allowed; never choose a tab by index alone.
 
 - `广告活动名称`: required, preserved exactly.
 - `广告类型`: `精准`/`EXACT` or `自动`/`AUTO`, normalized to `精准` or `自动`.
@@ -56,7 +67,9 @@ Do not interpret the input CPC as Lingxing actual CPC.
 
 ## Output filename
 
-`Amazon_Listing_关键词位置与CPC验证_<PARENT_ASIN>_<YYYYMMDD_HHMMSS>.xlsx`
+`<TARGET_ASIN>_<YYYYMMDD>.xlsx`
+
+Example: `B0HK3MFZ5S_20260921.xlsx`. Do not add a descriptive prefix or time-of-day suffix unless the user explicitly requests it.
 
 ## Fixed output worksheets
 
@@ -94,6 +107,13 @@ Configuration block fields:
 11. `实际CPC结束日期`
 12. `请求天数`
 13. `范围确认`
+
+For Feishu-resolved runs:
+
+- `Listing输入文件` records the `输入文档` display name and source token or URL;
+- `广告输入文件` records the resolved `测试广告信息` sheet title and token or URL;
+- `输入ASIN` is the tracking-sheet target ASIN, not a different source ASIN inside the product workbook;
+- `Listing首次上传时间` comes from the tracking row's `第1天上传时间`; preserve date-only precision and do not invent a clock time.
 
 Advertising-plan table headers:
 
@@ -219,8 +239,11 @@ Fixed columns:
 ## Updating an existing output
 
 - Accept only a workbook that already matches v3.
+- Before starting, scan all keyword-detection cells in the same matched Feishu row and select the newest valid v3 workbook whose `验证配置.输入ASIN` matches the target ASIN. Never use a `listing检测` workbook as the baseline.
 - Update a copy, never the user's only file.
 - Append one run record for every attempt.
 - Append exact and automatic snapshots by run.
 - Never edit or delete a first-organic event.
 - Recalculate the current summary from the latest successful run.
+- Resolve the current run date in the user's timezone as `YYYY-MM-DD`. Reuse the rightmost exact adjacent `<YYYY-MM-DD>listing检测` / `<YYYY-MM-DD>关键词检测` pair for that run date whose matched-row keyword cell is blank. If none exists, append that exact date-specific pair, leave the new Listing column blank, and write the verified copy only to the matched-row keyword cell.
+- Never overwrite an earlier keyword attachment or alter a paired Listing attachment. Completion requires header, filename, token, paired-cell, and source-row readback.
