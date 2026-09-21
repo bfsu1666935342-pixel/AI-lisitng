@@ -1,0 +1,7 @@
+interface:
+  display_name: "Amazon Keyword Position and CPC Validation"
+  short_description: "Validate organic rank, exact-ad position, CPC, and auto terms"
+  default_prompt: "Use $validate-amazon-listing-performance with my Listing and advertising workbooks to validate organic rank, exact-ad position and CPC, and automatic search terms."
+
+policy:
+  allow_implicit_invocation: true
