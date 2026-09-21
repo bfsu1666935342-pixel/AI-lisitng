@@ -1,7 +1,7 @@
 interface:
   display_name: "Amazon Keyword Position and CPC Validation"
   short_description: "Validate organic rank, exact-ad position, CPC, and auto terms"
-  default_prompt: "Use $validate-amazon-listing-performance with my Listing and advertising workbooks to validate organic rank, exact-ad position and CPC, and automatic search terms."
+  default_prompt: "Use $validate-amazon-listing-performance for this target ASIN, read the product and test-advertising inputs from the project Feishu sheet, and publish the verified keyword result into a suitable current-date keyword column or append the paired date columns when needed."
 
 policy:
   allow_implicit_invocation: true
