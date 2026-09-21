@@ -2,17 +2,24 @@
 
 ## Input workbook
 
-Use `assets/amazon-listing-pipeline-input-template.xlsx` as the schema authority.
+The operational input is the Excel file referenced by `输入文档` in the Feishu tracking sheet. Use `assets/amazon-listing-pipeline-input-template.xlsx` as a fallback schema reference, while accepting the maintained live-header aliases below.
 
 Required sheets and headers:
 
 ### 新品基础信息
 
-`ASIN | 产品类型 | 产品人群画像 | 使用场景 | 用途 | 核心卖点 | 市场选择`
+Core Listing fields:
+
+`ASIN | 产品类型 | 产品人群画像 | 使用场景 | 用途 | 核心卖点`
+
+Marketplace field: accept either `市场选择` or `站点`.
 
 - One product row is expected.
 - `市场选择` normally contains `Amazon-US` or `Amazon-DE`.
-- At least `ASIN`, `市场选择`, and one fact column must be nonblank.
+- For the `站点` alias, normalize `US` to `Amazon-US` and `DE` to `Amazon-DE`. Preserve another explicit value but do not guess its locale.
+- At least `ASIN`, one marketplace field, and one fact column must be nonblank.
+- This workbook `ASIN` is the source ASIN, not always the Alexa query target. Select the Alexa-target ASIN from the tracking-sheet column under `feishu-sheet-io.md`: for `老品` the two must match; for `新品` and `老品新listing测试`, query the tracking-sheet Alexa-target ASIN and use this workbook only as the expected-fact source.
+- `目标 Amazon 类目` may supply the product category for pain-point matching. Other maintained metadata columns, including category-subdivision and brand declarations, remain metadata unless the user explicitly expands the Alexa fact scope.
 
 ### 新品基础配置
 
@@ -36,7 +43,7 @@ Always start from `assets/amazon-listing-alexa-validation-output-template.xlsx` 
 
 ### 验证汇总
 
-Populate the run metadata cells next to:
+Populate the run metadata cells next to the following labels. `ASIN` must be the selected tracking-sheet Alexa-target ASIN, not a differing source ASIN from the input workbook:
 
 - `ASIN`
 - `市场`
