@@ -1,0 +1,8 @@
+interface:
+  display_name: "Amazon Listing Alexa 验证"
+  short_description: "验证 Alexa 抓取、复跑表达优化与品类痛点解决"
+  brand_color: "#17365D"
+  default_prompt: "Use $validate-amazon-listing-alexa to validate this Amazon Listing with Alexa Shopping and produce the fixed validation workbook."
+
+policy:
+  allow_implicit_invocation: true
