@@ -4,7 +4,7 @@
 
 The output places three observations together without claiming causation:
 
-- configured CPC bid from the user's advertising input;
+- configured CPC bid from the matched Feishu `测试广告信息` sheet;
 - period actual CPC from Lingxing exact-match spend and clicks;
 - point-in-time organic and advertising positions from SIF.
 
@@ -77,6 +77,8 @@ Store:
 - best organic child, rank, page, and row;
 - elapsed hours from timezone-normalized Listing upload time;
 - input bid CPC, period actual CPC, and simultaneous advertising page/row from the deterministic campaign row selected below.
+
+When the tracking-sheet upload value is date-only, do not invent a time-of-day. Leave `hours_to_first_rank` blank and record `上传时间仅精确到日期`; the report-period calendar dates and day-number calculation remain valid.
 
 If one keyword exists in several campaigns, choose the row with the lowest positive input bid CPC; break a tie by campaign name. State that the first-event CPC row is a deterministic reference, not proof of which campaign caused the organic event.
 

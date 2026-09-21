@@ -8,21 +8,21 @@ Use connected integrations when available. Otherwise use the in-app browser or t
 
 ## Marketplace mapping and ASIN family
 
-Map input `站点` through the current connected catalog or returned Listing record. Filter every query to that marketplace.
+Map `站点` from the matched row's `输入文档` through the current connected catalog or returned Listing record. Filter every query to that marketplace.
 
 Resolve the parent through the current Lingxing Listing-list query:
 
-1. exact-search the input ASIN in the selected marketplace;
+1. exact-search the tracking-sheet target ASIN in the selected marketplace;
 2. deduplicate rows across stores by `asin + parent_asin + marketplace`;
 3. require exactly one distinct nonblank parent;
-4. if input may itself be a parent, retry an exact parent-ASIN query;
+4. if the target ASIN may itself be a parent, retry an exact parent-ASIN query;
 5. query that parent to obtain the deduplicated child-ASIN set.
 
 Zero parent matches is `父ASIN未匹配`. Multiple parents is `父ASIN匹配冲突` and requires user direction.
 
 ## Lingxing report-period gate
 
-- Default start: Listing upload marketplace-local date.
+- Default start: the matched tracking row's `第1天上传时间`, interpreted as a marketplace-local calendar date.
 - Default end: execution marketplace-local date.
 - Inclusive days = end - start + 1.
 - At 30 days or fewer, record `自动执行（≤30天）`.
@@ -57,7 +57,7 @@ For each enabled automatic input row:
 4. preserve source spelling and capture time;
 5. do not bring search terms from exact, phrase, broad, or another automatic campaign.
 
-The input CPC is the campaign's configured bid supplied by the user. v3 does not calculate automatic actual CPC.
+The input CPC is the campaign's configured bid read from the matched row's `测试广告信息` sheet. v3 does not calculate automatic actual CPC.
 
 ## SIF current-position collection
 
