@@ -1,8 +1,8 @@
 interface:
   display_name: "Amazon Listing Alexa 验证"
-  short_description: "验证 Alexa 抓取、复跑表达优化与品类痛点解决"
+  short_description: "按主推ASIN读取飞书输入、验证 Alexa 并写回"
   brand_color: "#17365D"
-  default_prompt: "Use $validate-amazon-listing-alexa to validate this Amazon Listing with Alexa Shopping and produce the fixed validation workbook."
+  default_prompt: "Use $validate-amazon-listing-alexa with this Alexa-target ASIN, resolve its product state and input from the project Feishu tracking sheet, validate the correct target with Alexa Shopping, and write the fixed workbook to a newly appended date-specific Listing column with an empty paired keyword column."
 
 policy:
   allow_implicit_invocation: true
