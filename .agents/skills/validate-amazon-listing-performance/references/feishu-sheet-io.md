@@ -72,7 +72,7 @@ The currently verified date-specific headers are `2026-09-21listing检测` and `
 ## Find the latest prior keyword result
 
 - Before every run, inspect every populated matched-row cell whose header is a keyword-detection header, including legacy day-based headers and current date-specific headers. Track candidates by column coordinate so duplicate same-date headers are not collapsed. Never inspect `listing检测` files as performance baselines.
-- Read each candidate file mention, deduplicate by file token, and download it. Require the fixed v3 seven-sheet schema and require `验证配置.输入ASIN` to equal the tracking-sheet target ASIN.
+- Read each candidate file mention, deduplicate by file token, and download it. Prefer the fixed v5 eight-sheet schema and require `验证配置.输入ASIN` to equal the tracking-sheet target ASIN. When no valid v5 exists, retain the newest valid v4 eight-sheet workbook, then v3 seven-sheet workbook, as a migration candidate under `input-output-contract.md`.
 - Determine candidate recency from the maximum parseable `运行记录.完成时间`; use the newest snapshot capture time only when no completion time is available. Do not infer recency from a day number or date in the header, filename, upload order, or cell position.
 - Select the valid candidate with the greatest timestamp earlier than the new run, including partial runs so no attempt history is lost. If equally recent candidates conflict, stop and ask which is authoritative.
 - Update a copy of that workbook and preserve all append-only history. If no valid prior workbook exists, start from the fixed output template.

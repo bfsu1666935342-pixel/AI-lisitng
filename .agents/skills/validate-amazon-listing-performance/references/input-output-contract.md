@@ -1,8 +1,8 @@
 # Fixed input and output contract
 
-Output contract version: `v3`
+Output contract version: `v5`
 
-This version validates organic position, exact-ad position and CPC, and automatic-campaign expansion terms. It intentionally replaces the broad traffic/conversion `v2` contract. Do not silently migrate a v2 workbook.
+This version validates exact-input organic position, all target-family organic keywords on pages 1-3, exact-ad position and CPC, and automatic-campaign expansion terms. It intentionally replaces the broad traffic/conversion `v2` contract. Do not migrate a v2 workbook.
 
 ## Ordinary invocation and Feishu sources
 
@@ -80,13 +80,14 @@ Example: `B0HK3MFZ5S_20260921.xlsx`. Do not add a descriptive prefix or time-of-
 5. `关键词首次自然位`
 6. `自动扩词快照`
 7. `字段字典`
+8. `前三页自然位记录`
 
 ## `验证结果`
 
 Formula-driven latest summary with these blocks:
 
 1. identity: input ASIN, parent ASIN, Listing upload time, latest run ID, latest capture time, actual-CPC report period;
-2. KPIs: exact input rows, exact keywords with organic position, first-organic events, exact keywords with advertising position, automatic expansion terms;
+2. KPIs: exact input rows, exact keywords with organic position, first-organic events, exact keywords with advertising position, automatic expansion terms, and all page-1-to-3 organic keywords in the latest run;
 3. latest exact-keyword table: keyword, campaign, input bid CPC, period actual CPC, first organic time, current organic page/row, current ad page/row, capture time and status;
 4. latest automatic-term table: campaign, input bid CPC, expansion term, first detected time and capture time.
 
@@ -138,6 +139,8 @@ One row per invocation. Fixed fields:
 13. `精准快照行数`
 14. `自动扩词行数`
 15. `备注`
+16. `前三页自然位状态`
+17. `前三页自然词行数`
 
 Generate a unique `RUN-<YYYYMMDD-HHMMSS>-<suffix>` value.
 
@@ -180,7 +183,7 @@ Fixed fields:
 
 ## `关键词首次自然位`
 
-Append-only, immutable event table. Unique event identity:
+Append-only, immutable event table for both enabled exact-input keywords and every keyword first discovered by the page-1-to-3 reverse-ASIN scan. Unique event identity:
 
 `listing_version_id + parent_asin + normalized keyword`
 
@@ -230,6 +233,22 @@ Fixed fields:
 
 When a successful report contains no term, retain one placeholder row with blank `search_term` and `quality_flag=未发现扩词`.
 
+## `前三页自然位记录`
+
+Reader-facing cumulative roster for every target-family keyword ever directly observed on organic pages 1, 2, or 3. It is independent of the advertising-input keyword list and contains exactly five columns:
+
+1. `关键词`
+2. `首次抓取时间`
+3. `首次自然位置`
+4. `本次抓取时间`
+5. `本次自然位置`
+
+Each keyword has one stable row, matched by normalized keyword within the same Listing version and parent ASIN. `首次抓取时间` comes from the matching immutable `关键词首次自然位.first_detected_at` event. `首次自然位置` is the directly reported page/row at that first capture. Both cells become immutable. For a new word, append a row after existing data and fill both time columns with the actual capture time and both position columns with `第X页第Y位`. Do not insert it into the middle or resort prior rows.
+
+After each **complete successful** family scan, update only `本次抓取时间` and `本次自然位置` on existing rows. For a word still observed, write the scan's actual capture time and current directly reported `第X页第Y位`. For a word absent from the complete pages-1-to-3 population, write that capture time and `无自然位`. If it later reappears, update the current pair on its original row; never create a duplicate or change the first pair. `无自然位` means not observed within the first three pages on this complete scan; it does not assert absence from all Amazon results.
+
+When a complete successful scan returns zero page-1-to-3 keywords, retain all historical rows and mark their current positions `无自然位` with this scan time. When the source fails or only partial pagination/child coverage is available, do not mark missing words absent or replace their last confirmed current pair. Record `部分成功` or failure and coverage in `运行记录`; positive observations may update matching rows only if clearly labelled partial. Never put a failure placeholder into this five-column reader table.
+
 ## `字段字典`
 
 Fixed columns:
@@ -238,12 +257,16 @@ Fixed columns:
 
 ## Updating an existing output
 
-- Accept only a workbook that already matches v3.
-- Before starting, scan all keyword-detection cells in the same matched Feishu row and select the newest valid v3 workbook whose `验证配置.输入ASIN` matches the target ASIN. Never use a `listing检测` workbook as the baseline.
+- Prefer a workbook that already matches v5. Otherwise migrate the newest valid v4 eight-sheet workbook, then the newest valid v3 seven-sheet workbook, for the same target ASIN. Never use a `listing检测` workbook as the baseline or reuse v2.
+- In a v4-to-v5 upgrade, preserve the existing row order and map `关键词` to `关键词`, `首次出现时间` to `首次抓取时间`, and the prior three-column `自然位置` to `首次自然位置` when that position represents the first observation; verify it against the immutable `关键词首次自然位` page/row and use the event's first position if they differ. Seed `本次抓取时间` from the capture time of the workbook's current observed position and `本次自然位置` from that current position. Do not label a migration-only edit as a new scan.
+- In a v3-to-v5 upgrade, add the v4 run fields and reader sheet, then populate the five-column roster from existing immutable events and the first complete v5 scan. Preserve all other history.
+- During migration, seed first event time/run from matching immutable `关键词首次自然位` evidence when it exists. Otherwise use the first successful capture after migration. Never infer or backdate a first time from provider history.
+- Before starting, scan all keyword-detection cells in the same matched Feishu row and select the newest valid v5 workbook whose `验证配置.输入ASIN` matches the target ASIN; fall back to the newest migratable v4 or v3 workbook. Never use a `listing检测` workbook as the baseline.
 - Update a copy, never the user's only file.
 - Append one run record for every attempt.
-- Append exact and automatic snapshots by run.
+- Append exact and automatic snapshots by run. Append immutable first events and reader rows for newly discovered page-1-to-3 keywords; update only the current pair on existing reader rows when coverage permits.
 - Never edit or delete a first-organic event.
+- Never edit or delete an earlier `关键词首次自然位` event or the first pair of an existing reader row.
 - Recalculate the current summary from the latest successful run.
 - Resolve the current run date in the user's timezone as `YYYY-MM-DD`. Reuse the rightmost exact adjacent `<YYYY-MM-DD>listing检测` / `<YYYY-MM-DD>关键词检测` pair for that run date whose matched-row keyword cell is blank. If none exists, append that exact date-specific pair, leave the new Listing column blank, and write the verified copy only to the matched-row keyword cell.
 - Never overwrite an earlier keyword attachment or alter a paired Listing attachment. Completion requires header, filename, token, paired-cell, and source-row readback.

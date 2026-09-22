@@ -57,7 +57,7 @@ For each enabled automatic input row:
 4. preserve source spelling and capture time;
 5. do not bring search terms from exact, phrase, broad, or another automatic campaign.
 
-The input CPC is the campaign's configured bid read from the matched row's `测试广告信息` sheet. v3 does not calculate automatic actual CPC.
+The input CPC is the campaign's configured bid read from the matched row's `测试广告信息` sheet. v5 does not calculate automatic actual CPC.
 
 ## SIF current-position collection
 
@@ -75,12 +75,26 @@ Natural and advertising page/row are point-in-time observations. Page layout may
 
 When nothing is found within scan depth, retain a placeholder exact snapshot. This means `not found within scan depth`, not `no Amazon rank exists`.
 
+## SIF reverse-ASIN page-1-to-3 keyword discovery
+
+Use the current SIF reverse-ASIN organic-keyword or keyword-ranking source for every resolved child ASIN.
+
+1. Filter to the selected marketplace and the same search context used for the exact-keyword scan.
+2. Retrieve the full available organic-keyword result set for each child, not only the advertising-input keywords.
+3. Keep only results whose organic page is directly reported as 1, 2, or 3.
+4. Preserve keyword spelling, owning child ASIN, organic rank, page, row, actual capture times, source name, and scan depth.
+5. Union all children and deduplicate by normalized keyword using `metric-and-event-logic.md`.
+6. Compare the final keywords with enabled advertising-input keyword rows only to populate `is_ad_test_keyword`; absence from advertising input never excludes a natural keyword.
+
+If the source exposes rank but not a reliable page, do not convert rank to page. Exclude that row from the page-1-to-3 population and record the limitation. When pagination or source limits prevent a complete pull, mark `前三页自然位状态=部分成功` and state the returned-versus-declared coverage instead of claiming the set is complete.
+
 ## Failure handling
 
 - Lingxing identity failure: do not query guessed parents.
 - Exact-report failure: preserve SIF results, leave actual CPC unavailable, and record the source error.
 - Automatic-report failure: do not write `未发现扩词`; write a failure placeholder.
 - SIF failure: preserve Lingxing evidence, leave position fields blank, and record the source error.
+- Reverse-ASIN natural-keyword failure: preserve the existing `前三页自然位记录` rows and current pairs unchanged, record the concrete failure in `运行记录`, and never treat failure as zero keywords or mark prior rows `无自然位`.
 - Partial keyword success: retain successful rows and identify failed keywords.
 
 Every attempted invocation gets one `运行记录` row.

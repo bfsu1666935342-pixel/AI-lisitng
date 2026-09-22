@@ -2,11 +2,12 @@
 
 ## Measurement purpose
 
-The output places three observations together without claiming causation:
+The output places four observations together without claiming causation:
 
 - configured CPC bid from the matched Feishu `测试广告信息` sheet;
 - period actual CPC from Lingxing exact-match spend and clicks;
-- point-in-time organic and advertising positions from SIF.
+- point-in-time exact-keyword organic and advertising positions from SIF;
+- a point-in-time reverse-ASIN population of every target-family keyword directly reported on organic pages 1-3.
 
 Always retain their different timestamps and periods.
 
@@ -69,7 +70,7 @@ Event identity:
 
 `listing_version_id + parent_asin + normalized keyword`
 
-Create the event when no earlier successful exact snapshot for the identity has a positive organic rank and the current successful snapshot does.
+Create the event when no earlier workflow event exists for the identity and either the enabled exact-keyword scan or the page-1-to-3 reverse-ASIN scan currently reports a positive organic position.
 
 Store:
 
@@ -84,6 +85,25 @@ If one keyword exists in several campaigns, choose the row with the lowest posit
 
 Once written, never update or duplicate the event. `first_detected_at` means first detected by this workflow; precision is bounded by run frequency and scan depth.
 
+## Page-1-to-3 organic-keyword snapshot
+
+For each run, union SIF reverse-ASIN organic-keyword results across every resolved child ASIN. Keep only rows with a directly reported `organic_page` equal to 1, 2, or 3.
+
+- Normalize keyword identity with the shared keyword rule and deduplicate across the family.
+- For duplicates, keep the lowest positive `organic_rank`; break a rank tie with the lowest page, then row, then lexicographically smallest child ASIN.
+- Do not require the keyword to exist in `测试广告信息`. Record `is_ad_test_keyword=是` only when it matches an enabled advertising-input keyword after normalization.
+- Do not infer page from an assumed results-per-page count. A row without a directly reported page cannot enter the page-1-to-3 population.
+
+First-observation identity:
+
+`listing_version_id + parent_asin + normalized keyword`
+
+On the first successful observation, append one immutable row to `关键词首次自然位` with the actual capture time and run ID. On every later run, read that original time exactly; never replace it with a newer time, a better rank, or a provider-history date.
+
+Maintain the reader-facing `前三页自然位记录` with exactly `关键词`、`首次抓取时间`、`首次自然位置`、`本次抓取时间`、`本次自然位置`. Preserve the first pair and row order forever. Append new keywords at the bottom with both pairs set from their first actual capture. On a complete successful scan, update only the current pair for prior rows: current page/row as `第X页第Y位`, or `无自然位` when absent from the full directly observed pages-1-to-3 set. A reappearing word updates its original row. Partial/failed scans cannot establish disappearance; leave unconfirmed current pairs unchanged and log coverage.
+
+During a v3/v4-to-v5 upgrade, a matching immutable `关键词首次自然位` event is valid earlier workflow evidence and seeds the first time/run and first page/row. Nonmatching keywords begin at their first successful new capture. A v4 reader row's current position/time is migrated as the current pair, not re-labelled with the migration time.
+
 ## Automatic expansion terms
 
 For every enabled automatic input row, match the Lingxing customer-search-term report by marketplace and exact campaign name over the confirmed report period.
@@ -92,7 +112,7 @@ For every enabled automatic input row, match the Lingxing customer-search-term r
 - Store only terms returned for that automatic campaign.
 - `first_detected_at` is the earliest workflow capture containing the term for the same Listing version, parent, campaign, CPC, and normalized term.
 - `is_new_term=是` only on that first workflow capture; later captures use `否`.
-- Do not calculate automatic actual CPC in v3.
+- Do not calculate automatic actual CPC in v5.
 
 A successful empty report is `未发现扩词`. A failed report remains `领星抓取失败`; do not convert it to an empty success.
 
@@ -103,5 +123,6 @@ A successful empty report is `未发现扩词`. A failed report remains `领星�
 - First-organic events: distinct immutable event rows.
 - Advertising-visible keywords: latest-run exact rows with `ad_visible=是`.
 - Automatic expansion terms: nonblank terms in the latest successful run.
+- Page-1-to-3 organic keywords: unique rows in `前三页自然位记录` whose latest confirmed `本次自然位置` is a directly observed `第X页第Y位`; exclude `无自然位` and any stale rows when the latest scan is partial/failed. Report the count as unavailable rather than a complete current count if coverage is incomplete.
 
 Count rows at the contract grain. Do not silently deduplicate distinct campaigns that intentionally use the same keyword and CPC.
